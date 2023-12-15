@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get_state_manager/src/simple/get_state.dart';
+import 'package:get/instance_manager.dart';
+import 'package:task_manager/ui/controllers/cancelled_task_controller.dart';
 
-import '../../data/models/task_list_model.dart';
-import '../../data/network/network_caller.dart';
-import '../../data/network/network_response.dart';
-import '../../data/utility/urls.dart';
 import '../widgets/profile_summary_card.dart';
 import '../widgets/task_item_card.dart';
 
@@ -15,32 +14,13 @@ class CancelledTasksScreen extends StatefulWidget {
 }
 
 class _CancelledTasksScreenState extends State<CancelledTasksScreen> {
-  bool getCancelledTaskInProgress = false;
-  TaskListModel taskListModel = TaskListModel();
-
-  Future<void> getCancelledTaskList() async {
-    getCancelledTaskInProgress = true;
-    if (mounted) {
-      setState(() {});
-    }
-
-    final NetworkResponse response =
-        await NetworkCaller().getRequest(Urls.getCancelledTask);
-
-    if (response.isSuccess) {
-      taskListModel = TaskListModel.fromJson(response.jsonResponse);
-    }
-
-    getCancelledTaskInProgress = false;
-    if (mounted) {
-      setState(() {});
-    }
-  }
+  final CancelledTaskController _cancelledTaskController =
+      Get.find<CancelledTaskController>();
 
   @override
   void initState() {
     super.initState();
-    getCancelledTaskList();
+    _cancelledTaskController.getCancelledTaskList();
   }
 
   @override
@@ -51,36 +31,38 @@ class _CancelledTasksScreenState extends State<CancelledTasksScreen> {
           children: [
             const ProfileSummary(),
             Expanded(
-              child: Visibility(
-                visible: getCancelledTaskInProgress == false,
-                replacement: const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                child: RefreshIndicator(
-                  onRefresh: getCancelledTaskList,
-                  child: ListView.builder(
-                    itemBuilder: (context, index) {
-                      return TaskItemCard(
-                        task: taskListModel.taskList![index],
-                        onChangeStatus: () {
-                          getCancelledTaskList();
+              child: GetBuilder<CancelledTaskController>(
+                builder: (cancelledTaskController) {
+                  return Visibility(
+                    visible:
+                        cancelledTaskController.getCancelledTaskInProgress ==
+                            false,
+                    replacement: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    child: RefreshIndicator(
+                      onRefresh: cancelledTaskController.getCancelledTaskList,
+                      child: ListView.builder(
+                        itemBuilder: (context, index) {
+                          return TaskItemCard(
+                            task: cancelledTaskController
+                                .getTaskListModel.taskList![index],
+                            onChangeStatus: () {
+                              cancelledTaskController.getCancelledTaskList();
+                            },
+                            onDelete: () {
+                              cancelledTaskController.getCancelledTaskList();
+                            },
+                            clipColor: Colors.red,
+                            showProgress: (inProgress) {},
+                          );
                         },
-                        showProgress: (inProgress) {
-                          getCancelledTaskInProgress = inProgress;
-                          if (mounted) {
-                            setState(() {});
-                          }
-                        },
-                        countSummaryProgress: (countProgress) {},
-                        onDelete: () {
-                          getCancelledTaskList();
-                        },
-                        clipColor: Colors.red,
-                      );
-                    },
-                    itemCount: taskListModel.taskList?.length,
-                  ),
-                ),
+                        itemCount: cancelledTaskController
+                            .getTaskListModel.taskList?.length,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],

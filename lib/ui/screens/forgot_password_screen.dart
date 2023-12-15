@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:task_manager/data/network/network_caller.dart';
-import 'package:task_manager/data/network/network_response.dart';
+import 'package:get/get.dart';
+import 'package:task_manager/ui/controllers/email_verification_controller.dart';
 import 'package:task_manager/ui/screens/pin_verification_screen.dart';
 import 'package:task_manager/ui/widgets/body_background.dart';
 import 'package:task_manager/ui/widgets/snack_message.dart';
@@ -17,8 +17,8 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailTEController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  bool verifyEmailInProgress = false;
+  final EmailVerificationController _emailVerificationController =
+      Get.find<EmailVerificationController>();
 
   @override
   Widget build(BuildContext context) {
@@ -65,17 +65,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
-                          child: Visibility(
-                            visible: !verifyEmailInProgress,
-                            replacement: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            child: ElevatedButton(
-                              onPressed: verifyEmail,
-                              child:
-                                  const Icon(Icons.arrow_circle_right_outlined),
-                            ),
-                          ),
+                          child: GetBuilder<EmailVerificationController>(
+                              builder: (emailVerificationController) {
+                            return Visibility(
+                              visible: emailVerificationController
+                                      .verifyEmailInProgress ==
+                                  false,
+                              replacement: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              child: ElevatedButton(
+                                onPressed: verifyEmail,
+                                child: const Icon(
+                                  Icons.arrow_circle_right_outlined,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            );
+                          }),
                         ),
                         const SizedBox(height: 48),
                         Row(
@@ -90,7 +97,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                             TextButton(
                               onPressed: () {
-                                Navigator.pop(context);
+                                Get.back();
                               },
                               child: const Text(
                                 'Sign In',
@@ -115,40 +122,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    verifyEmailInProgress = true;
-    if (mounted) {
-      setState(() {});
-    }
 
-    final NetworkResponse response = await NetworkCaller()
-        .getRequest(Urls.verifyEmail(_emailTEController.text.trim()));
+    final response = await _emailVerificationController
+        .verifyEmail(_emailTEController.text.trim());
 
-    verifyEmailInProgress = false;
-    if (mounted) {
-      setState(() {});
-    }
-
-    if (response.isSuccess && response.jsonResponse["status"] == "success") {
+    if (response) {
       if (mounted) {
-        showSnackMessage(context, "Email Verification Successful!");
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                PinVerificationScreen(email: _emailTEController.text.trim()),
-          ),
-        );
+        showSnackMessage(context, _emailVerificationController.message);
+        Get.to(PinVerificationScreen(email: _emailTEController.text.trim()));
       }
     } else {
-      if (response.statusCode == 401) {
-        if (mounted) {
-          showSnackMessage(context, "Please give the correct email");
-        }
-      } else {
-        if (mounted) {
-          showSnackMessage(context, "Invalid try again");
-        }
+      if (mounted) {
+        showSnackMessage(context, _emailVerificationController.message);
       }
     }
   }

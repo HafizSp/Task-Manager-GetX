@@ -13,12 +13,18 @@ class SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-        child: Column(
-          children: [
-            Text(count, style: Theme.of(context).textTheme.titleLarge),
-            Text(title),
-          ],
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        child: SizedBox(
+          width: 70,
+          child: Column(
+            children: [
+              Text(count, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
         ),
       ),
     );

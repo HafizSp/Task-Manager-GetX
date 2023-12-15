@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:task_manager/data/network/network_caller.dart';
 
 import '../../data/models/task.dart';
@@ -11,19 +12,17 @@ class TaskItemCard extends StatefulWidget {
     super.key,
     required this.task,
     required this.onChangeStatus,
-    required this.showProgress,
-    required this.countSummaryProgress,
     required this.onDelete,
     required this.clipColor,
+    required this.showProgress,
   });
 
   final Task task;
-  final VoidCallback onChangeStatus;
-  final VoidCallback onDelete;
   final MaterialColor clipColor;
 
+  final VoidCallback onChangeStatus;
+  final VoidCallback onDelete;
   final Function(bool) showProgress;
-  final Function(bool) countSummaryProgress;
 
   @override
   State<TaskItemCard> createState() => _TaskItemCardState();
@@ -32,28 +31,25 @@ class TaskItemCard extends StatefulWidget {
 class _TaskItemCardState extends State<TaskItemCard> {
   Future<void> deleteTask() async {
     widget.showProgress(true);
-    widget.countSummaryProgress(true);
-    setState(() {});
     final response = await NetworkCaller()
         .getRequest(Urls.deleteTask(widget.task.sId ?? ''));
     if (response.isSuccess) {
       widget.onDelete();
     }
-    widget.showProgress(false);
-    widget.countSummaryProgress(false);
-    setState(() {});
+    widget.showProgress(true);
   }
 
   Future<void> updateTaskStatus(String status) async {
     widget.showProgress(true);
-    widget.countSummaryProgress(true);
     final response = await NetworkCaller()
         .getRequest(Urls.updateTaskStatus(widget.task.sId ?? '', status));
     if (response.isSuccess) {
       widget.onChangeStatus();
+      // Get.find<CancelledTaskController>().getCancelledTaskList();
+      // Get.find<CancelledTaskController>().getCancelledTaskList();
+      // Get.find<CancelledTaskController>().getCancelledTaskList();
     }
-    widget.showProgress(false);
-    widget.countSummaryProgress(false);
+    widget.showProgress(true);
   }
 
   @override
@@ -100,11 +96,14 @@ class _TaskItemCardState extends State<TaskItemCard> {
                                 ),
                                 actions: [
                                   TextButton(
-                                      onPressed: deleteTask,
+                                      onPressed: () {
+                                        Get.back();
+                                        deleteTask();
+                                      },
                                       child: const Text("Yes")),
                                   TextButton(
                                       onPressed: () {
-                                        Navigator.pop(context);
+                                        Get.back();
                                       },
                                       child: const Text("No"))
                                 ],
@@ -139,35 +138,36 @@ class _TaskItemCardState extends State<TaskItemCard> {
               title: Text(e.name),
               onTap: () {
                 updateTaskStatus(e.name);
-                Navigator.pop(context);
+                Get.back();
               },
             ))
         .toList();
 
     showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text("Update Status"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: item,
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(color: Colors.grey),
-                  ),
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Update Status"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: item,
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: TextButton(
+                onPressed: () {
+                  Get.back();
+                },
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(color: Colors.grey),
                 ),
-              )
-            ],
-          );
-        });
+              ),
+            )
+          ],
+        );
+      },
+    );
   }
 }

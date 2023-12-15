@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:task_manager/data/network/network_caller.dart';
 import 'package:task_manager/data/network/network_response.dart';
 import 'package:task_manager/data/utility/urls.dart';
+import 'package:task_manager/ui/controllers/reset_password_controller.dart';
 import 'package:task_manager/ui/widgets/body_background.dart';
 import 'package:task_manager/ui/widgets/snack_message.dart';
 
@@ -25,8 +28,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       TextEditingController();
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  bool resetPasswordInProgress = false;
+  final ResetPasswordController _resetPasswordController =
+      Get.find<ResetPasswordController>();
 
   @override
   Widget build(BuildContext context) {
@@ -93,21 +96,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
-                          child: Visibility(
-                            visible: resetPasswordInProgress == false,
-                            replacement: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            child: Visibility(
-                              visible: resetPasswordInProgress == false,
-                              replacement: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                              child: ElevatedButton(
-                                onPressed: resetPassword,
-                                child: const Text('Confirm'),
-                              ),
-                            ),
+                          child: GetBuilder<ResetPasswordController>(
+                            builder: (resetPasswordController) {
+                              return Visibility(
+                                visible: resetPasswordController
+                                        .resetPasswordInProgress ==
+                                    false,
+                                replacement: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: resetPassword,
+                                  child: const Text(
+                                    'Confirm',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(height: 48),
@@ -123,12 +129,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ),
                             TextButton(
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const LoginScreen(),
-                                  ),
-                                );
+                                Get.to(const LoginScreen());
                               },
                               child: const Text(
                                 'Sign In',
@@ -152,44 +153,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Future<void> resetPassword() async {
     if (_formKey.currentState!.validate() &&
         _newPasswordTEController.text == _confirmPasswordTEController.text) {
-      resetPasswordInProgress = true;
-      if (mounted) {
-        setState(() {});
-      }
-      Map<String, dynamic> item = {
-        "email": widget.email,
-        "OTP": widget.pin,
-        "password": _confirmPasswordTEController.text,
-      };
+      final response = await _resetPasswordController.resetPassword(
+          widget.email, widget.pin, _confirmPasswordTEController.text);
 
-      final NetworkResponse response =
-          await NetworkCaller().postRequest(Urls.resetPassword, body: item);
-
-      resetPasswordInProgress = false;
-      if (mounted) {
-        setState(() {});
-      }
-
-      if (response.isSuccess && response.jsonResponse["status"] == "success") {
+      if (response) {
         if (mounted) {
-          showSnackMessage(context, "Successfully password reset!");
-
-          Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const LoginScreen(),
-              ),
-              (route) => false);
+          showSnackMessage(context, _resetPasswordController.message);
         }
+        Get.offAll(const LoginScreen());
       } else {
-        if (response.statusCode == 401) {
-          if (mounted) {
-            showSnackMessage(context, "Please check password");
-          }
-        } else {
-          if (mounted) {
-            showSnackMessage(context, "Password reset failed");
-          }
+        if (mounted) {
+          showSnackMessage(context, _resetPasswordController.message);
         }
       }
     }

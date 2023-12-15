@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:task_manager/ui/controllers/pin_verification_controller.dart';
 import 'package:task_manager/ui/screens/login_screen.dart';
 import 'package:task_manager/ui/screens/reset_password_screen.dart';
 import 'package:task_manager/ui/widgets/body_background.dart';
 
-import '../../data/network/network_caller.dart';
-import '../../data/network/network_response.dart';
-import '../../data/utility/urls.dart';
 import '../widgets/snack_message.dart';
 
 class PinVerificationScreen extends StatefulWidget {
@@ -19,8 +18,9 @@ class PinVerificationScreen extends StatefulWidget {
 }
 
 class _PinVerificationScreenState extends State<PinVerificationScreen> {
-  bool verifyOTPInProgress = false;
   String? PIN;
+  final PinVerificationController _pinVerificationController =
+      Get.find<PinVerificationController>();
 
   @override
   Widget build(BuildContext context) {
@@ -80,16 +80,24 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
-                        child: Visibility(
-                          visible: verifyOTPInProgress == false,
-                          replacement: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: verifyPIN,
-                            child: const Text('Verify'),
-                          ),
-                        ),
+                        child: GetBuilder<PinVerificationController>(
+                            builder: (pinVerificationController) {
+                          return Visibility(
+                            visible:
+                                pinVerificationController.verifyOTPInProgress ==
+                                    false,
+                            replacement: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            child: ElevatedButton(
+                              onPressed: verifyPIN,
+                              child: const Text(
+                                'Verify',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
                       const SizedBox(height: 48),
                       Row(
@@ -104,12 +112,7 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
                           ),
                           TextButton(
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const LoginScreen(),
-                                ),
-                              );
+                              Get.to(const LoginScreen());
                             },
                             child: const Text(
                               'Sign In',
@@ -131,42 +134,17 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
 
   Future<void> verifyPIN() async {
     if (PIN?.trim() != null) {
-      verifyOTPInProgress = true;
-      if (mounted) {
-        setState(() {});
-      }
+      final response =
+          await _pinVerificationController.verifyPIN(widget.email, PIN!.trim());
 
-      final NetworkResponse response = await NetworkCaller()
-          .getRequest(Urls.verifyOTP(widget.email, PIN!.trim()));
-
-      verifyOTPInProgress = false;
-      if (mounted) {
-        setState(() {});
-      }
-
-      if (response.isSuccess && response.jsonResponse["status"] == "success") {
+      if (response) {
         if (mounted) {
-          showSnackMessage(context, "Pin verified");
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ResetPasswordScreen(
-                email: widget.email,
-                pin: PIN!,
-              ),
-            ),
-          );
+          showSnackMessage(context, _pinVerificationController.message);
+          Get.off(ResetPasswordScreen(email: widget.email, pin: PIN!.trim()));
         }
       } else {
-        if (response.statusCode == 401) {
-          if (mounted) {
-            showSnackMessage(context, "Pin is not correct");
-          }
-        } else {
-          if (mounted) {
-            showSnackMessage(context, "Invalid try again");
-          }
+        if (mounted) {
+          showSnackMessage(context, _pinVerificationController.message);
         }
       }
     }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:task_manager/data/network/network_caller.dart';
-import 'package:task_manager/data/network/network_response.dart';
+import 'package:get/get_state_manager/src/simple/get_state.dart';
+import 'package:get/instance_manager.dart';
+import 'package:task_manager/ui/controllers/add_new_task_controller.dart';
+import 'package:task_manager/ui/controllers/new_task_controller.dart';
 import 'package:task_manager/ui/widgets/body_background.dart';
 import 'package:task_manager/ui/widgets/profile_summary_card.dart';
 import 'package:task_manager/ui/widgets/snack_message.dart';
-
-import '../../data/utility/urls.dart';
 
 class AddNewTaskScreen extends StatefulWidget {
   const AddNewTaskScreen({super.key, required this.onAddTask});
@@ -21,7 +21,8 @@ class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
   final TextEditingController _descriptionTEController =
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool createTaskInProgress = false;
+  final AddNewTaskController _addNewTaskController =
+      Get.find<AddNewTaskController>();
 
   @override
   Widget build(BuildContext context) {
@@ -72,16 +73,24 @@ class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
                           const SizedBox(height: 16),
                           SizedBox(
                             width: double.infinity,
-                            child: Visibility(
-                              visible: createTaskInProgress == false,
-                              replacement: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                              child: ElevatedButton(
-                                onPressed: createTask,
-                                child: const Text("Add"),
-                              ),
-                            ),
+                            child: GetBuilder<AddNewTaskController>(
+                                builder: (addNewTaskController) {
+                              return Visibility(
+                                visible: addNewTaskController
+                                        .getCreateTaskInProgress ==
+                                    false,
+                                replacement: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: createTask,
+                                  child: const Text(
+                                    "Add",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              );
+                            }),
                           ),
                         ],
                       ),
@@ -100,33 +109,21 @@ class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    createTaskInProgress = true;
-    if (mounted) {
-      setState(() {});
-    }
-    final NetworkResponse response = await NetworkCaller().postRequest(
-      Urls.createTask,
-      body: {
-        "title": _titleTEController.text.trim(),
-        "description": _descriptionTEController.text.trim(),
-        "status": "New"
-      },
-    );
-    createTaskInProgress = false;
-    if (mounted) {
-      setState(() {});
-    }
 
-    if (response.isSuccess) {
+    final response = await _addNewTaskController.createTask(
+        _titleTEController.text.trim(), _descriptionTEController.text.trim());
+
+    if (response) {
       widget.onAddTask();
       _titleTEController.clear();
       _descriptionTEController.clear();
+      Get.find<NewTaskController>().getNewTaskList();
       if (mounted) {
-        showSnackMessage(context, 'Successfully new task created!');
+        showSnackMessage(context, _addNewTaskController.getMessage);
       }
     } else {
       if (mounted) {
-        showSnackMessage(context, 'Create new task failed!', true);
+        showSnackMessage(context, _addNewTaskController.getMessage, true);
       }
     }
   }

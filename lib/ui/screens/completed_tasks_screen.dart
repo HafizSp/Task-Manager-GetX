@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:task_manager/data/models/task_list_model.dart';
-import 'package:task_manager/data/network/network_caller.dart';
-import 'package:task_manager/data/network/network_response.dart';
+import 'package:get/get_state_manager/src/simple/get_state.dart';
+import 'package:get/instance_manager.dart';
+import 'package:task_manager/ui/controllers/completed_task_controller.dart';
 import 'package:task_manager/ui/widgets/task_item_card.dart';
 
-import '../../data/utility/urls.dart';
 import '../widgets/profile_summary_card.dart';
 
 class CompletedTasksScreen extends StatefulWidget {
@@ -15,32 +14,13 @@ class CompletedTasksScreen extends StatefulWidget {
 }
 
 class _CompletedTasksScreenState extends State<CompletedTasksScreen> {
-  bool getCompletedTaskInProgress = false;
-  TaskListModel taskListModel = TaskListModel();
-
-  Future<void> getCompletedTaskList() async {
-    getCompletedTaskInProgress = true;
-    if (mounted) {
-      setState(() {});
-    }
-
-    final NetworkResponse response =
-        await NetworkCaller().getRequest(Urls.getCompletedTask);
-
-    if (response.isSuccess) {
-      taskListModel = TaskListModel.fromJson(response.jsonResponse);
-    }
-
-    getCompletedTaskInProgress = false;
-    if (mounted) {
-      setState(() {});
-    }
-  }
+  final CompletedTaskController _completedTaskController =
+      Get.find<CompletedTaskController>();
 
   @override
   void initState() {
     super.initState();
-    getCompletedTaskList();
+    _completedTaskController.getCompletedTaskList();
   }
 
   @override
@@ -51,37 +31,37 @@ class _CompletedTasksScreenState extends State<CompletedTasksScreen> {
           children: [
             const ProfileSummary(),
             Expanded(
-              child: Visibility(
-                visible: getCompletedTaskInProgress == false,
-                replacement: const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                child: RefreshIndicator(
-                  onRefresh: getCompletedTaskList,
-                  child: ListView.builder(
-                    itemBuilder: (context, index) {
-                      return TaskItemCard(
-                        task: taskListModel.taskList![index],
-                        onChangeStatus: () {
-                          getCompletedTaskList();
-                        },
-                        showProgress: (inProgress) {
-                          getCompletedTaskInProgress = inProgress;
-                          if (mounted) {
-                            setState(() {});
-                          }
-                        },
-                        countSummaryProgress: (countProgress) {},
-                        onDelete: () {
-                          getCompletedTaskList();
-                        },
-                        clipColor: Colors.green,
-                      );
-                    },
-                    itemCount: taskListModel.taskList?.length,
+              child: GetBuilder<CompletedTaskController>(
+                  builder: (completedTaskController) {
+                return Visibility(
+                  visible: completedTaskController.getCompletedTaskInProgress ==
+                      false,
+                  replacement: const Center(
+                    child: CircularProgressIndicator(),
                   ),
-                ),
-              ),
+                  child: RefreshIndicator(
+                    onRefresh: completedTaskController.getCompletedTaskList,
+                    child: ListView.builder(
+                      itemBuilder: (context, index) {
+                        return TaskItemCard(
+                          task: completedTaskController
+                              .getTaskListModel.taskList![index],
+                          onChangeStatus: () {
+                            completedTaskController.getCompletedTaskList();
+                          },
+                          onDelete: () {
+                            completedTaskController.getCompletedTaskList();
+                          },
+                          clipColor: Colors.green,
+                          showProgress: (inProgress) {},
+                        );
+                      },
+                      itemCount: completedTaskController
+                          .getTaskListModel.taskList?.length,
+                    ),
+                  ),
+                );
+              }),
             ),
           ],
         ),
